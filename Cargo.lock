@@ -1828,7 +1828,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "weather_backend"
+name = "weather_api"
 version = "0.1.0"
 dependencies = [
  "argon2",
