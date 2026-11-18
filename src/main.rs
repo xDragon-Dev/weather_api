@@ -1,15 +1,15 @@
-mod data_types;
-mod sql_types;
+mod encript;
+mod error;
+mod valid;
 
+use error::AppError;
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use std::env;
+use uuid::Uuid;
+use valid::*;
+use validator::Validate;
 
-use axum::{
-    Json, Router,
-    extract::State,
-    http::StatusCode,
-    routing::{get, post},
-};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,7 +22,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&database_url)
         .await?;
 
-    let app = Router::new().route("/login", get(log_in)).with_state(pool);
+    let app = Router::new()
+        .route("/sign_in", post(register))
+        .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     axum::serve(listener, app).await?;
@@ -30,11 +32,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn log_in(State(pg_pool): State<Pool<Postgres>>) {
-    let value: (i32,) = sqlx::query_as("SELECT $1")
-        .bind(10_i32)
-        .fetch_one(&pg_pool)
+async fn register(
+    State(pg_pool): State<Pool<Postgres>>,
+    Json(sign_in_request): Json<SignInRequest>,
+) -> Result<StatusCode, AppError> {
+    sign_in_request.validate()?;
+
+    let already_exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE name = $1)")
+            .bind(&sign_in_request.name)
+            .fetch_one(&pg_pool)
+            .await?;
+
+    if already_exists {
+        return Err(AppError::UserAlreadyExists);
+    }
+
+    // 3. Ejecuta el hash en un hilo separado para no bloquear Tokio
+    let password = sign_in_request.password.clone();
+    let password_hash = tokio::task::spawn_blocking(move || encript::hash(password.as_bytes()))
         .await
-        .unwrap();
-    println!("value: {}", value.0);
+        .map_err(|e| AppError::Internal(e.to_string()))? // Error del JoinHandle
+        .map_err(|e| AppError::Internal(e.to_string()))?; // Error de tu función hash
+
+    // 4. Inserta en la BD
+    sqlx::query("INSERT INTO users(id, name, email, pass_hash) VALUES ($1, $2, $3, $4)")
+        .bind(Uuid::now_v7())
+        .bind(sign_in_request.name)
+        .bind(sign_in_request.email)
+        .bind(password_hash)
+        .execute(&pg_pool)
+        .await?;
+
+    Ok(StatusCode::CREATED)
 }

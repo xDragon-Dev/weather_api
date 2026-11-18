@@ -7,24 +7,15 @@ static USERNAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]{2,29}$").unwrap());
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
-struct LoginRequest {
+pub struct SignInRequest {
     #[validate(regex(path = *USERNAME_REGEX, message = "Username must be between 3 and 30 alphanumeric characters, starting with an alphabetic character"))]
-    #[validate(custom(function = "unique_username"))]
-    name: String,
+    pub name: String,
     #[validate(email(message = "Invalid email"))]
-    email: String,
+    pub email: String,
     #[validate(custom(function = "strong_password"))]
-    password: String,
+    pub password: String,
     #[validate(must_match(other = password, message = "Passwords do not match"))]
-    confirm_password: String,
-}
-
-fn unique_username(username: &str) -> Result<(), ValidationError> {
-    //Database check
-    if username == "xXUserNameXx777" {
-        return Err(ValidationError::new("what_a_bad_name"));
-    }
-    Ok(())
+    pub confirm_password: String,
 }
 
 fn strong_password(password: &str) -> Result<(), ValidationError> {
