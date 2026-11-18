@@ -1,0 +1,35 @@
+[package]
+name = "weather_backend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Password hashing functionality
+argon2 = "0.6.0"
+
+# REST API, routing and request handling library
+axum = "0.8.9"
+
+# Date and time library
+chrono = { version = "0.4.45", features = ["serde"] }
+
+# Support for .env file
+dotenvy = "0.15.7"
+
+# Regular expressions for Rust
+regex = "1.13.1"
+
+# Serialization/deserialization framework
+serde = { version = "1.0.229", features = ["derive"] }
+
+# Rust SQL Toolkit
+sqlx = { version = "0.9.0", features = ["runtime-tokio", "postgres", "derive", "uuid", "chrono"] }
+
+# Async runtime
+tokio = { version = "1.54.1", features = ["full"] }
+
+# A library to generate and parse UUIDs
+uuid = { version = "1.29.3", features = ["v7","serde"] }
+
+# Common validation functions (email, url, length, …)
+validator = { version = "0.21.0", featues = ["derive"], features = ["derive"] }
