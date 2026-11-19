@@ -1,13 +1,11 @@
-mod encript;
-mod error;
-mod valid;
-
-use error::AppError;
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 use std::env;
 use uuid::Uuid;
-use valid::*;
 use validator::Validate;
+
+use weather_api::encription;
+use weather_api::error::*;
+use weather_api::validation::*;
 
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
@@ -50,7 +48,7 @@ async fn register(
 
     // 3. Ejecuta el hash en un hilo separado para no bloquear Tokio
     let password = sign_in_request.password.clone();
-    let password_hash = tokio::task::spawn_blocking(move || encript::hash(password.as_bytes()))
+    let password_hash = tokio::task::spawn_blocking(move || encription::hash(password.as_bytes()))
         .await
         .map_err(|e| AppError::Internal(e.to_string()))? // Error del JoinHandle
         .map_err(|e| AppError::Internal(e.to_string()))?; // Error de tu función hash

@@ -5,44 +5,6 @@ use axum::{
 };
 use serde_json::json;
 
-pub enum AppError {
-    Validation(validator::ValidationErrors),
-    Database(sqlx::Error),
-    UserAlreadyExists,
-    Internal(String),
-}
-
-// Esto le dice a Axum cómo convertir tu error en una respuesta HTTP
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AppError::Validation(err) => (StatusCode::BAD_REQUEST, err.to_string()),
-            AppError::UserAlreadyExists => {
-                (StatusCode::CONFLICT, "User already exists".to_string())
-            }
-            AppError::Database(err) => {
-                // Logueas el error real internamente, pero no lo expones al cliente
-                eprintln!("Database error: {:?}", err);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Internal server error".to_string(),
-                )
-            }
-            AppError::Internal(msg) => {
-                eprintln!("Internal error: {}", msg);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Internal server error".to_string(),
-                )
-            }
-        };
-
-        let body = Json(json!({ "error": error_message }));
-        (status, body).into_response()
-    }
-}
-
-// Implementaciones de `From` para poder usar el operador `?` directamente
 impl From<validator::ValidationErrors> for AppError {
     fn from(err: validator::ValidationErrors) -> Self {
         AppError::Validation(err)
@@ -52,5 +14,48 @@ impl From<validator::ValidationErrors> for AppError {
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
         AppError::Database(err)
+    }
+}
+
+pub enum AppError {
+    Database(sqlx::Error),
+    Validation(validator::ValidationErrors),
+    Authentication,
+    Authorization,
+    Internal(String),
+    UserAlreadyExists,
+    EmailAlreadyInUse,
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status_code, error_message) = match self {
+            AppError::Authentication => (
+                StatusCode::UNAUTHORIZED,
+                String::from("Missing credencials to perform this operation"),
+            ),
+            AppError::Authorization => (
+                StatusCode::UNAUTHORIZED,
+                String::from("You may not have enough permissions"),
+            ),
+            AppError::Database(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                String::from("Internal server error"),
+            ),
+            AppError::Internal(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                String::from("Internal server error"),
+            ),
+            AppError::Validation(e) => (StatusCode::BAD_REQUEST, e.to_string()),
+            AppError::UserAlreadyExists => {
+                (StatusCode::CONFLICT, String::from("User already exists"))
+            }
+            AppError::EmailAlreadyInUse => (
+                StatusCode::CONFLICT,
+                String::from("Email is already in use"),
+            ),
+        };
+
+        (status_code, Json(json! ({"message": error_message}))).into_response()
     }
 }
