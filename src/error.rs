@@ -13,6 +13,15 @@ impl From<validator::ValidationErrors> for AppError {
 
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
+        if let sqlx::Error::Database(database_err) = &err {
+            if database_err.is_unique_violation() {
+                return match database_err.constraint() {
+                    Some("users_name_key") => AppError::UserAlreadyExists,
+                    Some("users_email_key") => AppError::EmailAlreadyInUse,
+                    _ => AppError::UserAlreadyExists,
+                };
+            }
+        }
         AppError::Database(err)
     }
 }

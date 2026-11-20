@@ -36,21 +36,8 @@ async fn register(
 ) -> Result<StatusCode, AppError> {
     sign_in_request.validate()?;
 
-    let already_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE name = $1)")
-            .bind(&sign_in_request.name)
-            .fetch_one(&pg_pool)
-            .await?;
-
-    if already_exists {
-        return Err(AppError::UserAlreadyExists);
-    }
-
-    // 3. Ejecuta el hash en un hilo separado para no bloquear Tokio
-    let password = sign_in_request.password.clone();
-    let password_hash = tokio::task::spawn_blocking(move || encription::hash(password.as_bytes()))
+    let password_hash = encription::hash(sign_in_request.password)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))? // Error del JoinHandle
         .map_err(|e| AppError::Internal(e.to_string()))?; // Error de tu función hash
 
     // 4. Inserta en la BD
