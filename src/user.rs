@@ -7,7 +7,7 @@ static USERNAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]{2,29}$").unwrap());
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
-pub struct SignInRequest {
+pub struct RegisterRequest {
     #[validate(regex(path = *USERNAME_REGEX, message = "Username must be between 3 and 30 alphanumeric characters, starting with an alphabetic character"))]
     pub name: String,
     #[validate(email(message = "Invalid email"))]
@@ -43,4 +43,11 @@ fn strong_password(password: &str) -> Result<(), ValidationError> {
             .with_message("Allowed special characters are: !@#$%^&*_-+=".into()));
     }
     Ok(())
+}
+
+#[derive(Validate, Debug, Serialize, Deserialize)]
+pub struct LoginRequest {
+    #[validate(email(message = "Invalid email"))]
+    pub email: String,
+    pub password: String,
 }

@@ -26,6 +26,12 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
+impl From<argon2::password_hash::Error> for AppError {
+    fn from(_value: argon2::password_hash::Error) -> Self {
+        AppError::Authorization
+    }
+}
+
 pub enum AppError {
     Database(sqlx::Error),
     Validation(validator::ValidationErrors),

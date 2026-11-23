@@ -5,7 +5,7 @@ use validator::Validate;
 
 use weather_api::encription;
 use weather_api::error::*;
-use weather_api::validation::*;
+use weather_api::user::*;
 
 use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
@@ -21,7 +21,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     let app = Router::new()
-        .route("/sign_in", post(register))
+        .route("/register", post(register))
+        .route("/log_in", post(log_in))
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
@@ -32,15 +33,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn register(
     State(pg_pool): State<Pool<Postgres>>,
-    Json(sign_in_request): Json<SignInRequest>,
+    Json(sign_in_request): Json<RegisterRequest>,
 ) -> Result<StatusCode, AppError> {
     sign_in_request.validate()?;
 
     let password_hash = encription::hash(sign_in_request.password)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?; // Error de tu función hash
+        .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    // 4. Inserta en la BD
     sqlx::query("INSERT INTO users(id, name, email, pass_hash) VALUES ($1, $2, $3, $4)")
         .bind(Uuid::now_v7())
         .bind(sign_in_request.name)
@@ -50,4 +50,21 @@ async fn register(
         .await?;
 
     Ok(StatusCode::CREATED)
+}
+
+async fn log_in(
+    State(pg_pool): State<Pool<Postgres>>,
+    Json(login_request): Json<LoginRequest>,
+) -> Result<StatusCode, AppError> {
+    login_request.validate()?;
+
+    let pass_hash: String = sqlx::query_scalar("SELECT pass_hash FROM users WHERE email = $1")
+        .bind(login_request.email)
+        .fetch_one(&pg_pool)
+        .await?;
+
+    encription::verify_password(login_request.password, pass_hash).await?;
+
+    //sqlx::query_scalar("SELECT FROM")
+    Ok(StatusCode::OK)
 }
