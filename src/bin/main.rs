@@ -23,6 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/register", post(register))
         .route("/log_in", post(log_in))
+        //.route("/action", method_router)
         .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
@@ -55,7 +56,7 @@ async fn register(
 async fn log_in(
     State(pg_pool): State<Pool<Postgres>>,
     Json(login_request): Json<LoginRequest>,
-) -> Result<StatusCode, AppError> {
+) -> Result<String, AppError> {
     login_request.validate()?;
 
     let pass_hash: String = sqlx::query_scalar("SELECT pass_hash FROM users WHERE email = $1")
@@ -66,5 +67,5 @@ async fn log_in(
     encription::verify_password(login_request.password, pass_hash).await?;
 
     //sqlx::query_scalar("SELECT FROM")
-    Ok(StatusCode::OK)
+    Ok(String::from("trusted"))
 }
