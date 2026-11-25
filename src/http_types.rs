@@ -1,6 +1,8 @@
+
+use std::sync::LazyLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::sync::LazyLock;
+use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 static USERNAME_REGEX: LazyLock<Regex> =
@@ -51,19 +53,11 @@ pub struct LoginRequest {
     pub email: String,
     pub password: String,
 }
-/*
-CREATE TABLE logs (
-    temp FLOAT4 NOT NULL,
-    hum FlOAT4 NOT NULL,
-    air_q FlOAT4 NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    node_id UUID NOT NULL REFERENCES nodes(id),
-    PRIMARY KEY (node_id, timestamp)
-);
- */
+
 #[derive(Debug, Validate, Serialize, Deserialize)]
 pub struct RegisterLogRequest {
     temp: f32,
     hum: f32,
     air_q: f32,
+    node_id: Uuid
 }

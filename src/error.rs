@@ -28,18 +28,25 @@ impl From<sqlx::Error> for AppError {
 
 impl From<argon2::password_hash::Error> for AppError {
     fn from(_value: argon2::password_hash::Error) -> Self {
+        AppError::Authentication
+    }
+}
+
+impl From<pasetors::errors::Error> for AppError{
+    fn from(_value: pasetors::errors::Error) -> Self {
         AppError::Authorization
     }
+    
 }
 
 pub enum AppError {
     Database(sqlx::Error),
+    UserAlreadyExists,
+    EmailAlreadyInUse,
     Validation(validator::ValidationErrors),
     Authentication,
     Authorization,
     Internal(String),
-    UserAlreadyExists,
-    EmailAlreadyInUse,
 }
 
 impl IntoResponse for AppError {

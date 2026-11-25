@@ -19,18 +19,18 @@ enum Role {
 #[derive(Serialize, Deserialize, Debug, PartialEq,Clone)]
 struct PayLoad {
     #[serde(rename="sub")]
-    username: String,
+    name: String,
     role: Role,
 }
 
 impl From<PayLoad> for Claims{
     fn from(value: PayLoad) -> Self {
         let mut claims = Claims::new_expires_in(&Duration::from_mins(15)).unwrap();
-        claims.subject(&value.username).unwrap();
-
+        claims.subject(&value.name).unwrap();
         claims
             .add_additional("role", json!(&value.role))
             .unwrap();
+        
         claims
     }
 
@@ -40,7 +40,7 @@ impl From<PayLoad> for Claims{
 #[test]
 fn generate_and_validate_public() {
     let payload = PayLoad {
-        username: String::from("Juan"),
+        name: String::from("Juan"),
         role: Role::Admin,
     };
 
@@ -56,7 +56,7 @@ fn generate_and_validate_public() {
 #[test]
 fn generate_and_validate_local() {
     let payload = PayLoad {
-        username: String::from("Juan"),
+        name: String::from("Juan"),
         role: Role::Admin,
     };
 

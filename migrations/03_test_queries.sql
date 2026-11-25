@@ -1,8 +1,8 @@
-INSERT INTO users(id,name,email,pass_hash) VALUES
-('5100e4e9-533f-43e9-8b25-c116dc4dfe9e', 'Juanito', 'juan@gmail.com','12345678'),
-('557ccfcd-45c9-4ba1-a8a4-d8ea8688809b', 'Maria', 'maria@gmail.com', '12345678'),
-('9e70e01b-e7c7-4abd-9994-7ce857dd9b5d', 'Pedrito', 'pedrito@gmail.com','12345678'),
-('49e016e3-49ec-4c79-abb5-93360048055d', 'Pablito', 'pablito@gmail.com', '12345678');
+INSERT INTO users(id,name,email,pass_hash,role) VALUES
+('5100e4e9-533f-43e9-8b25-c116dc4dfe9e', 'Juanito', 'juan@gmail.com','12345678', 'Regular'),
+('557ccfcd-45c9-4ba1-a8a4-d8ea8688809b', 'Maria', 'maria@gmail.com', '12345678', 'Regular'),
+('9e70e01b-e7c7-4abd-9994-7ce857dd9b5d', 'Pedrito', 'pedrito@gmail.com','12345678', 'Admin'),
+('49e016e3-49ec-4c79-abb5-93360048055d', 'Pablito', 'pablito@gmail.com', '12345678', 'Regular');
 
 INSERT INTO nodes(id, continent, country, region, city, district, lat, lon, alt_m, last_heartbeat) VALUES
 (

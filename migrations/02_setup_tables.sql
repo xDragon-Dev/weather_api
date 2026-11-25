@@ -2,7 +2,8 @@ CREATE TABLE users (
     id UUID PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    pass_hash TEXT NOT NULL
+    pass_hash TEXT NOT NULL,
+    role user_role NOT NULL
 );
 
 CREATE TABLE nodes (
