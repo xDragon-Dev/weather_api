@@ -11,22 +11,22 @@ use pasetors::{Public, public};
 use pasetors::{local,Local};
 
 #[derive(Serialize, Deserialize)]
-pub enum Role {
+pub enum PASETORole {
     Admin,
     Regular,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct PayLoad {
+pub struct PASETOPayLoad {
     #[serde(rename="sub")]
     pub name: String,
-    pub role: Role,
+    pub role: PASETORole,
 }
 
-impl TryFrom<PayLoad> for Claims {
+impl TryFrom<PASETOPayLoad> for Claims {
     type Error = pasetors::errors::Error;
 
-    fn try_from(value: PayLoad) -> Result<Self, Self::Error> {
+    fn try_from(value: PASETOPayLoad) -> Result<Self, Self::Error> {
         let duration = Duration::from_mins(15);
         let mut claims = Claims::new_expires_in(&duration)?;
         claims.subject(&value.name)?;

@@ -61,3 +61,88 @@ pub struct RegisterLogRequest {
     air_q: f32,
     node_id: Uuid
 }
+
+pub use error::AppError;
+
+pub mod error {
+    use axum::{ Json, http::StatusCode };
+    use axum::response::{IntoResponse, Response};
+    use serde_json::json;
+
+    impl From<validator::ValidationErrors> for AppError {
+        fn from(err: validator::ValidationErrors) -> Self {
+            AppError::Validation(err)
+        }
+    }
+
+    impl From<sqlx::Error> for AppError {
+        fn from(err: sqlx::Error) -> Self {
+            if let sqlx::Error::Database(database_err) = &err {
+                if database_err.is_unique_violation() {
+                    return match database_err.constraint() {
+                        Some("users_name_key") => AppError::UserAlreadyExists,
+                        Some("users_email_key") => AppError::EmailAlreadyInUse,
+                        _ => AppError::UserAlreadyExists,
+                    };
+                }
+            }
+            AppError::Database(err)
+        }
+    }
+
+    impl From<argon2::password_hash::Error> for AppError {
+        fn from(_value: argon2::password_hash::Error) -> Self {
+            AppError::Authentication
+        }
+    }
+
+    impl From<pasetors::errors::Error> for AppError{
+        fn from(_value: pasetors::errors::Error) -> Self {
+            AppError::Authorization
+        }
+        
+    }
+
+    pub enum AppError {
+        Database(sqlx::Error),
+        UserAlreadyExists,
+        EmailAlreadyInUse,
+        Validation(validator::ValidationErrors),
+        Authentication,
+        Authorization,
+        Internal(String),
+    }
+
+    impl IntoResponse for AppError {
+        fn into_response(self) -> Response {
+            let (status_code, error_message) = match self {
+                AppError::Authentication => (
+                    StatusCode::UNAUTHORIZED,
+                    String::from("Missing credencials to perform this operation"),
+                ),
+                AppError::Authorization => (
+                    StatusCode::UNAUTHORIZED,
+                    String::from("You may not have enough permissions"),
+                ),
+                AppError::Database(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Internal database error: {e}"),
+                ),
+                AppError::Internal(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Internal server error: {e}"),
+                ),
+                AppError::Validation(e) => (StatusCode::BAD_REQUEST, e.to_string()),
+                AppError::UserAlreadyExists => {
+                    (StatusCode::CONFLICT, String::from("User already exists"))
+                }
+                AppError::EmailAlreadyInUse => (
+                    StatusCode::CONFLICT,
+                    String::from("Email is already in use"),
+                ),
+            };
+
+            (status_code, Json(json! ({"message": error_message}))).into_response()
+        }
+    }
+}

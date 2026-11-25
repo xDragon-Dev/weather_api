@@ -1,21 +1,32 @@
-//CREATE TYPE user_role AS ENUM ('Regular', 'Admin');
-use uuid::Uuid;
-use time::OffsetDateTime;
-
 #[derive(sqlx::Type)]
-pub enum Role {
+#[sqlx(type_name = "user_role")]
+#[sqlx(rename_all = "lowercase")]
+pub enum SQLRole {
     Regular,
     Admin
 }
 
 #[derive(sqlx::FromRow)]
-pub struct User {
-    id: Uuid,
-    name: String,
-    email: String,
-    pass_hash: String,
-    role: Role
+pub struct SQLUser {
+    pub name: String,
+    pub pass_hash: String,
+    pub role: SQLRole
 }
+
+use crate::paseto::PASETORole as PasetoRole;
+
+impl From<SQLRole> for PasetoRole {
+    fn from(value: SQLRole) -> Self {
+        match value {
+            SQLRole::Admin => PasetoRole::Admin,
+            SQLRole::Regular => PasetoRole::Regular
+        }
+    }
+}
+
+/*
+use uuid::Uuid;
+use time::OffsetDateTime;
 
 #[derive(sqlx::FromRow)]
 struct Node {
@@ -39,15 +50,4 @@ pub struct Log {
     timestamp:OffsetDateTime,
     node_id: Uuid,
 }
-
-
-use crate::paseto::Role as PasetoRole;
-
-impl From<Role> for PasetoRole {
-    fn from(value: Role) -> Self {
-        match value {
-            Role::Admin => PasetoRole::Admin,
-            Role::Regular => PasetoRole::Regular
-        }
-    }
-}
+*/
