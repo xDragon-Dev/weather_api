@@ -1,53 +1,71 @@
+use time::OffsetDateTime;
+use uuid::Uuid;
+
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "user_role")]
 #[sqlx(rename_all = "lowercase")]
 pub enum SQLRole {
     Regular,
-    Admin
+    Admin,
 }
 
 #[derive(sqlx::FromRow)]
 pub struct SQLUser {
     pub name: String,
     pub pass_hash: String,
-    pub role: SQLRole
+    pub role: SQLRole,
 }
 
-use crate::paseto::PASETORole as PasetoRole;
+#[derive(sqlx::FromRow)]
+pub struct SQLog {
+    pub temp: f32,
+    pub hum: f32,
+    pub air_q: f32,
+    pub timestamp: OffsetDateTime,
+}
 
-impl From<SQLRole> for PasetoRole {
+#[derive(sqlx::FromRow)]
+pub struct SQLNode {
+    pub id: Uuid,
+    pub continent: String,
+    pub country: String,
+    pub region: String,
+    pub city: String,
+    pub district: String,
+}
+
+use crate::paseto::PASETORole;
+
+impl From<SQLRole> for PASETORole {
     fn from(value: SQLRole) -> Self {
         match value {
-            SQLRole::Admin => PasetoRole::Admin,
-            SQLRole::Regular => PasetoRole::Regular
+            SQLRole::Admin => PASETORole::Admin,
+            SQLRole::Regular => PASETORole::Regular,
         }
     }
 }
 
-/*
-use uuid::Uuid;
-use time::OffsetDateTime;
+use crate::http_types::{Location, Log};
 
-#[derive(sqlx::FromRow)]
-struct Node {
-    id: Uuid,
-    continent: String,
-    country: String,
-    region: String,
-    city: String,
-    district: String,
-    lat: f64,
-    lon: f64,
-    alt_m: f32,
-    last_heartbeat: OffsetDateTime
+impl From<SQLog> for Log {
+    fn from(value: SQLog) -> Self {
+        Self {
+            temp: value.temp,
+            hum: value.hum,
+            air_q: value.air_q,
+            timestamp: value.timestamp,
+        }
+    }
 }
 
-#[derive(sqlx::FromRow)]
-pub struct Log {
-    temp:f32,
-    hum:f32,
-    air_q:f32,
-    timestamp:OffsetDateTime,
-    node_id: Uuid,
+impl From<SQLNode> for Location {
+    fn from(value: SQLNode) -> Self {
+        Self {
+            continent: value.continent,
+            country: value.country,
+            region: value.region,
+            city: value.city,
+            district: value.district,
+        }
+    }
 }
-*/

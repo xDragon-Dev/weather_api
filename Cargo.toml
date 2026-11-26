@@ -17,6 +17,7 @@ time = { version = "0.3.55", features = ["serde"] }
 dotenvy = "0.15.7"
 
 # Regular expressions for Rust
+validator = { version = "0.21.0", features = ["derive"] }
 regex = "1.13.1"
 
 # Serialization/deserialization framework
@@ -31,9 +32,6 @@ tokio = { version = "1.54.1", features = ["full"] }
 
 # A library to generate and parse UUIDs
 uuid = { version = "1.29.3", features = ["v7","serde"] }
-
-# Common validation functions (email, url, length, …)
-validator = { version = "0.21.0", featues = ["derive"], features = ["derive"] }
 
 #Log utility
 tracing = "0.1.44"

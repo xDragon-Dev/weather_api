@@ -1,14 +1,13 @@
-
-use std::sync::LazyLock;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use std::sync::LazyLock;
+use time::OffsetDateTime;
 use validator::{Validate, ValidationError};
 
 static USERNAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]{2,29}$").unwrap());
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Serialize, Deserialize, Validate)]
 pub struct RegisterRequest {
     #[validate(regex(path = *USERNAME_REGEX, message = "Username must be between 3 and 30 alphanumeric characters, starting with an alphabetic character"))]
     pub name: String,
@@ -47,26 +46,49 @@ fn strong_password(password: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-#[derive(Validate, Debug, Serialize, Deserialize)]
+#[derive(Validate, Serialize, Deserialize)]
 pub struct LoginRequest {
     #[validate(email(message = "Invalid email"))]
     pub email: String,
     pub password: String,
 }
 
-#[derive(Debug, Validate, Serialize, Deserialize)]
-pub struct RegisterLogRequest {
-    temp: f32,
-    hum: f32,
-    air_q: f32,
-    node_id: Uuid
+#[derive(Serialize, Deserialize)]
+pub struct WeatherRequest {
+    pub lat: f64,
+    pub lon: f64,
+}
+
+#[derive(Serialize,Deserialize)]
+pub struct Log {
+    pub temp: f32,
+    pub hum: f32,
+    pub air_q: f32,
+    pub timestamp: OffsetDateTime,
+}
+
+pub type Logs = Vec<Log>;
+
+#[derive(Serialize,Deserialize)]
+pub struct Location {
+    pub continent: String,
+    pub country: String,
+    pub region: String,
+    pub city: String,
+    pub district: String,
+}
+
+#[derive(Serialize,Deserialize)]
+pub struct WeatherReport {
+    pub location: Location,
+    pub logs: Logs,
 }
 
 pub use error::AppError;
 
 pub mod error {
-    use axum::{ Json, http::StatusCode };
     use axum::response::{IntoResponse, Response};
+    use axum::{Json, http::StatusCode};
     use serde_json::json;
 
     impl From<validator::ValidationErrors> for AppError {
@@ -96,11 +118,10 @@ pub mod error {
         }
     }
 
-    impl From<pasetors::errors::Error> for AppError{
+    impl From<pasetors::errors::Error> for AppError {
         fn from(_value: pasetors::errors::Error) -> Self {
             AppError::Authorization
         }
-        
     }
 
     pub enum AppError {
@@ -124,13 +145,13 @@ pub mod error {
                     StatusCode::UNAUTHORIZED,
                     String::from("You may not have enough permissions"),
                 ),
-                AppError::Database(e) => (
+                AppError::Database(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Internal database error: {e}"),
+                    String::from("Internal server error"),
                 ),
-                AppError::Internal(e) => (
+                AppError::Internal(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Internal server error: {e}"),
+                    String::from("Internal server error"),
                 ),
                 AppError::Validation(e) => (StatusCode::BAD_REQUEST, e.to_string()),
                 AppError::UserAlreadyExists => {

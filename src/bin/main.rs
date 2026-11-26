@@ -1,28 +1,29 @@
 use std::env;
 use std::sync::Arc;
 
-use axum::routing::get;
 use pasetors::claims::Claims;
-use serde_json::Value;
-use serde_json::json;
-use uuid::Uuid;
-use validator::Validate;
-use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
-
-use weather_api::prelude::*;
-
-use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
-
 use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::version4::V4;
 
+use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
+use uuid::Uuid;
+use validator::Validate;
+
+use axum::{
+    Json, Router,
+    extract::State,
+    http::StatusCode,
+    routing::{get, post},
+};
+use serde_json::{Value, json};
+
+use weather_api::prelude::*;
 
 #[derive(Clone)]
 struct AppState {
     pg_pool: Pool<Postgres>,
-    key_pair: Arc<AsymmetricKeyPair<V4>>
+    key_pair: Arc<AsymmetricKeyPair<V4>>,
 }
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,12 +41,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_state = AppState {
         pg_pool: pool,
-        key_pair: Arc::new(kp)
+        key_pair: Arc::new(kp),
     };
 
     let app = Router::new()
         .route("/register", post(register))
         .route("/log_in", get(log_in))
+        .route("/weather", get(weather))
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
@@ -88,13 +90,70 @@ async fn log_in(
         .await?;
 
     verify_password(login_request.password, user.pass_hash).await?;
-    
-    let claims: PASETOPayLoad = PASETOPayLoad {
-        name: user.name, role: user.role.into()
+
+    let paylaod = PASETOPayLoad {
+        name: user.name,
+        role: user.role.into(),
     };
 
-    let claims = Claims::try_from(claims)?;
+    let claims = Claims::try_from(paylaod)?;
     let token = generate_public(&app_state.key_pair.secret, &claims)?;
-    
+
     Ok(Json(json!({"access_token": token})))
+}
+
+async fn weather(
+    State(app_state): State<AppState>,
+    Json(weather_request): Json<WeatherRequest>,
+) -> Result<Json<WeatherReport>, AppError> {
+    let node: SQLNode = sqlx::query_as(
+        "
+        SELECT 
+            id,
+            continent,
+            country,
+            region,
+            city,
+            district
+        FROM nodes
+        ORDER BY (
+            6371.0 * acos(
+                LEAST(1.0, GREATEST(-1.0,
+                    cos(radians($1)) * cos(radians(lat)) *
+                    cos(radians(lon) - radians($2)) +
+                    sin(radians($1)) * sin(radians(lat))
+                ))
+            )
+        ) ASC
+        LIMIT 1;
+    ",
+    )
+    .bind(weather_request.lat)
+    .bind(weather_request.lon)
+    .fetch_one(&app_state.pg_pool)
+    .await?;
+
+    let logs: Vec<SQLog> = sqlx::query_as(
+        "
+        SELECT 
+            temp,
+            hum,
+            air_q,
+            timestamp
+        FROM logs
+        WHERE node_id = $1
+        AND timestamp >= NOW() - INTERVAL '10 hours'
+        ORDER BY timestamp DESC;
+    ",
+    )
+    .bind(node.id)
+    .fetch_all(&app_state.pg_pool)
+    .await?;
+
+    let weather_report = WeatherReport {
+        location: node.into(),
+        logs: logs.into_iter().map(|v|v.into()).collect()
+    };
+
+    Ok(Json(weather_report))
 }
