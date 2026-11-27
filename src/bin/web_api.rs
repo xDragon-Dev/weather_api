@@ -29,7 +29,7 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenvy::dotenv()?;
+    dotenvy::dotenv().ok();
     let database_url =
         env::var("DATABASE_URL").expect(r#"Environment variable "DATABASE_URL" must be set"#);
 
