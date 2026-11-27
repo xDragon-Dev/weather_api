@@ -14,7 +14,7 @@ struct Person {
 }
 
 #[test]
-fn serialize() {
+fn serialize() -> Result<(), Box<dyn std::error::Error>> {
     let people = vec![
         Person {
             name: "Juan".into(),
@@ -30,7 +30,9 @@ fn serialize() {
 
     let mut writter = csv::Writer::from_writer(Vec::new());
     for person in people {
-        writter.serialize(person).unwrap();
+        writter.serialize(person)?;
     }
-    let output = String::from_utf8(writter.into_inner().unwrap()).unwrap();
+    let inner = writter.into_inner()?;
+    let _output = String::from_utf8(inner)?;
+    Ok(())
 }

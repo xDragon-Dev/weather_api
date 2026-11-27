@@ -7,6 +7,7 @@ use pasetors::keys::{AsymmetricKeyPair, Generate};
 use pasetors::version4::V4;
 
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -50,6 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/log_in", get(log_in))
         .route("/weather_report", get(weather_report))
         .route("/download_csv", get(download_csv))
+        .route("/register_log", post(register_log))        
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
@@ -165,12 +167,13 @@ async fn download_csv(
     State(app_state): State<AppState>,
     Json(csv_request): Json<CSVRequest>,
 ) -> Result<(StatusCode, HeaderMap, Vec<u8>), AppError> {
-    let now = time::OffsetDateTime::now_utc();
+    let now = OffsetDateTime::now_local()
+        .map_err(|_| AppError::Internal("unable to determine local offset".into()))?;
 
     let start_date = match csv_request.date_range {
-        DateRange::Today => now - time::Duration::days(1),
-        DateRange::ThisWeek => now - time::Duration::weeks(1),
-        DateRange::ThisMonth => now - time::Duration::days(30),
+        DateRange::Today => now - Duration::days(1),
+        DateRange::ThisWeek => now - Duration::weeks(1),
+        DateRange::ThisMonth => now - Duration::days(30),
         DateRange::All => time::macros::datetime!(2000-01-01 12:00:00.0 UTC),
     };
 
@@ -213,74 +216,20 @@ async fn download_csv(
     Ok((StatusCode::OK, header_map, body))
 }
 
-/*
-CARACTERISTICAS PORAGREGAR
+async fn register_log(
+    State(app_state): State<AppState>,
+    Json(register_log_request): Json<RegisterLogRequest>,
+) -> Result<StatusCode,AppError> {
+    let now = OffsetDateTime::now_local().map_err(|_| AppError::Internal("unable to determine local offset".into()))?;
 
-Resgistrar log de forma segura
-Hacer "sonar" la esp32 (o configurarla, con credenciales)
-Descargar csv
+    sqlx::query("INSERT INTO logs(temp, hum, air_q, timestamp, node_id) VALUES ($1,$2,$3,$4,$5)")
+    .bind(register_log_request.temp)
+    .bind(register_log_request.hum)
+    .bind(register_log_request.air_q)
+    .bind(now)
+    .bind(register_log_request.node_id)
+    .execute(&app_state.pg_pool)
+    .await?;
 
-
-Crear la app de la esp32
-Crear la app movil
-Hostear mi rest api a la red
-obtener un dominio temporal
-*/
-
-/*
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::{Router, routing::get};
-use serde::Serialize;
-use time::OffsetDateTime;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app = Router::new().route("/csv", get(download_csv));
-
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
-    axum::serve(listener, app).await?;
-    Ok(())
+    Ok(StatusCode::OK)
 }
-
-#[derive(Serialize)]
-struct Log {
-    value1: f32,
-    value2: f32,
-    #[serde(with = "time::serde::rfc3339")]
-    timestamp: OffsetDateTime,
-}
-
-async fn download_csv() -> Result<(StatusCode, HeaderMap, Vec<u8>), String> {
-    let people = vec![
-        Log {
-            value1: 0.0,
-            value2: 0.0,
-            timestamp: OffsetDateTime::now_utc(),
-        },
-        Log {
-            value1: 0.0,
-            value2: 0.0,
-            timestamp: OffsetDateTime::now_utc(),
-        },
-    ];
-
-    //"\u{FEFF}" para que excel entienda caracteres raros (con tildes viñetas y eso)
-    let mut writter = csv::Writer::from_writer(Vec::from("\u{FEFF}".as_bytes()));
-    for person in people {
-        writter.serialize(person).map_err(|e| e.to_string())?;
-    }
-
-    let mut header_map = HeaderMap::new();
-    header_map.insert(
-        header::CONTENT_TYPE,
-        "text/csv; charset=utf-8".parse().unwrap(),
-    );
-    header_map.insert(
-        header::CONTENT_DISPOSITION,
-        "attachment; filename=\"personas.csv\"".parse().unwrap(),
-    );
-
-    Ok((StatusCode::OK, header_map, writter.into_inner().unwrap()))
-}
-
-*/

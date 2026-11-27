@@ -98,6 +98,14 @@ pub struct CSVRequest {
     pub date_range: DateRange,
 }
 
+#[derive(Deserialize)]
+pub struct RegisterLogRequest {
+    pub node_id: Uuid,
+    pub temp: f32,
+    pub hum: f32,
+    pub air_q: f32,
+}
+
 pub use error::AppError;
 
 pub mod error {
