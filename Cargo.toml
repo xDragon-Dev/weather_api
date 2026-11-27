@@ -34,9 +34,5 @@ tokio = { version = "1.54.1", features = ["full"] }
 # A library to generate and parse UUIDs
 uuid = { version = "1.29.3", features = ["v7","serde"] }
 
-#Log utility
-tracing = "0.1.44"
-tracing-subscriber = "0.3.23"
-
 #Seions and permisions
 pasetors = "0.8.1"
