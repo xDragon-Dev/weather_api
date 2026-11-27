@@ -18,10 +18,10 @@ pub struct SQLUser {
 
 #[derive(sqlx::FromRow)]
 pub struct SQLog {
+    pub timestamp: OffsetDateTime,
     pub temp: f32,
     pub hum: f32,
     pub air_q: f32,
-    pub timestamp: OffsetDateTime,
 }
 
 #[derive(sqlx::FromRow)]

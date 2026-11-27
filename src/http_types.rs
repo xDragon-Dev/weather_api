@@ -2,6 +2,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 use time::OffsetDateTime;
+use uuid::Uuid;
 use validator::{Validate, ValidationError};
 
 static USERNAME_REGEX: LazyLock<Regex> =
@@ -46,30 +47,28 @@ fn strong_password(password: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-#[derive(Validate, Serialize, Deserialize)]
+#[derive(Validate, Deserialize)]
 pub struct LoginRequest {
     #[validate(email(message = "Invalid email"))]
     pub email: String,
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct WeatherRequest {
     pub lat: f64,
     pub lon: f64,
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize)]
 pub struct Log {
+    pub timestamp: OffsetDateTime,
     pub temp: f32,
     pub hum: f32,
     pub air_q: f32,
-    pub timestamp: OffsetDateTime,
 }
 
-pub type Logs = Vec<Log>;
-
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize)]
 pub struct Location {
     pub continent: String,
     pub country: String,
@@ -78,10 +77,25 @@ pub struct Location {
     pub district: String,
 }
 
-#[derive(Serialize,Deserialize)]
+#[derive(Serialize)]
 pub struct WeatherReport {
+    pub station_id: Uuid,
     pub location: Location,
-    pub logs: Logs,
+    pub logs: Vec<Log>,
+}
+
+#[derive(Deserialize)]
+pub enum DateRange {
+    Today,
+    ThisWeek,
+    ThisMonth,
+    All,
+}
+
+#[derive(Deserialize)]
+pub struct CSVRequest {
+    pub station_id: Uuid,
+    pub date_range: DateRange,
 }
 
 pub use error::AppError;
