@@ -15,7 +15,7 @@ use axum::{
     Json, Router,
     extract::State,
     http::StatusCode,
-    routing::{get, post},
+    routing::post,
 };
 use serde_json::{Value, json};
 
@@ -48,9 +48,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/register", post(register))
-        .route("/log_in", get(log_in))
-        .route("/weather_report", get(weather_report))
-        .route("/download_csv", get(download_csv))
+        .route("/log_in", post(log_in))
+        .route("/weather_report", post(weather_report))
+        .route("/download_csv", post(download_csv))
         .route("/register_log", post(register_log))        
         .with_state(app_state);
 
